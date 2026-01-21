@@ -9,7 +9,16 @@ from .services import (
     parse_date_or_today,
     update_transaction,
 )
-from .ui import confirm, print_menu, prompt, prompt_float, prompt_int, prompt_optional
+from .ui import (
+    confirm,
+    print_menu,
+    prompt,
+    prompt_choice,
+    prompt_choice_optional,
+    prompt_float,
+    prompt_int,
+    prompt_optional,
+)
 
 
 def print_table(rows) -> None:
@@ -44,11 +53,12 @@ def main() -> None:
         choice = prompt("Choose an option: ")
 
         try:
+            # 1) ADD
             if choice == "1":
                 d = prompt_optional("Date (YYYY-MM-DD) [blank=today]: ")
                 tx_date = parse_date_or_today(d or "")
 
-                tx_type = prompt("Type (income/expense): ").lower()
+                tx_type = prompt_choice("Type (income/expense): ", {"income", "expense"})
                 category = prompt("Category [blank=Uncategorized]: ")
                 amount = prompt_float("Amount (positive number): ")
                 note = prompt("Note (optional): ")
@@ -57,10 +67,11 @@ def main() -> None:
                 save_transactions(transactions)
                 print(f"Added transaction #{tx.id} ✅")
 
+            # 2) LIST
             elif choice == "2":
                 month = prompt_optional("Filter month (YYYY-MM) [blank=all]: ")
                 category = prompt_optional("Filter category [blank=all]: ")
-                tx_type = prompt_optional("Filter type (income/expense) [blank=all]: ")
+                tx_type = prompt_choice_optional("Filter type (income/expense) [blank=all]: ", {"income", "expense"})
 
                 rows = filter_transactions(transactions, month=month, category=category, tx_type=tx_type)
                 if not rows:
@@ -68,6 +79,7 @@ def main() -> None:
                 else:
                     print_table(rows)
 
+            # 3) SUMMARY
             elif choice == "3":
                 month = prompt_optional("Summary month (YYYY-MM) [blank=overall]: ")
                 s = get_summary(transactions, month=month)
@@ -77,12 +89,13 @@ def main() -> None:
                 print(f"Total expenses: {s['total_expenses']:.2f}")
                 print(f"Net balance:    {s['net_balance']:.2f}")
 
+            # 4) EDIT
             elif choice == "4":
                 tx_id = prompt_int("Transaction ID to edit: ")
                 print("Leave blank to keep current value.\n")
 
                 new_date = prompt_optional("New date (YYYY-MM-DD): ")
-                new_type = prompt_optional("New type (income/expense): ")
+                new_type = prompt_choice_optional("New type (income/expense): ", {"income", "expense"})
                 new_cat = prompt_optional("New category: ")
                 new_amt = prompt_optional("New amount: ")
                 new_note = prompt_optional("New note: ")
@@ -102,6 +115,7 @@ def main() -> None:
                 else:
                     print("ID not found.")
 
+            # 5) DELETE
             elif choice == "5":
                 tx_id = prompt_int("Transaction ID to delete: ")
                 if confirm("Are you sure you want to delete this transaction?"):
@@ -114,6 +128,7 @@ def main() -> None:
                 else:
                     print("Cancelled.")
 
+            # 0) EXIT
             elif choice == "0":
                 save_transactions(transactions)
                 print("Goodbye 👋")
@@ -122,9 +137,11 @@ def main() -> None:
             else:
                 print("Invalid option. Try again.")
 
+        except ValueError as e:
+            # Clear feedback for bad input (wrong date, wrong amount, etc.)
+            print(f"Input error: {e}")
         except Exception:
-            # never show a Python stack trace to the user
-            print("Something went wrong with that input. Please try again.")
+            print("Unexpected error. Please try again.")
 
 
 if __name__ == "__main__":
